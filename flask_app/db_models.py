@@ -1,7 +1,8 @@
-import uuid
 import datetime
+import uuid
+
+from extensions import db
 from sqlalchemy.dialects.postgresql import UUID
-from db import db
 
 
 class HexByteString(db.TypeDecorator):
@@ -19,41 +20,57 @@ class HexByteString(db.TypeDecorator):
 
 
 roles_users = db.Table(
-    'roles_users',
-    db.Column('user_id', UUID(as_uuid=True), db.ForeignKey('users.id')),
-    db.Column('role_id', UUID(as_uuid=True), db.ForeignKey('roles.id'))
+    "roles_users",
+    db.Column("user_id", UUID(as_uuid=True), db.ForeignKey("users.id")),
+    db.Column("role_id", UUID(as_uuid=True), db.ForeignKey("roles.id")),
 )
 
 
 class Role(db.Model):
-    __tablename__ = 'roles'
+    __tablename__ = "roles"
 
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, unique=True, nullable=False)
+    id = db.Column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        unique=True,
+        nullable=False,
+    )
     name = db.Column(db.String(80), unique=True)
-    description = db.Column(db.String(255), default='')
+    description = db.Column(db.String(255), default="")
 
 
 class User(db.Model):
-    __tablename__ = 'users'
+    __tablename__ = "users"
 
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, unique=True, nullable=False)
+    id = db.Column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        unique=True,
+        nullable=False,
+    )
     email = db.Column(db.String(255), unique=True, nullable=False)
     password = db.Column(HexByteString, nullable=False)
-    roles = db.relationship('Role', secondary=roles_users, backref=db.backref('users', lazy='dynamic'))
-    history = db.relationship('History', backref=db.backref('user'))
+    roles = db.relationship(
+        "Role", secondary=roles_users, backref=db.backref("users", lazy="dynamic")
+    )
+    history = db.relationship("History", backref=db.backref("user"))
 
     def __repr__(self):
-        return f'<User {self.email}>'
+        return f"<User {self.email}>"
 
 
 class History(db.Model):
-    __tablename__ = 'history'
+    __tablename__ = "history"
 
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, unique=True, nullable=False)
-    user_id = db.Column(UUID(as_uuid=True), db.ForeignKey('users.id'))
+    id = db.Column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        unique=True,
+        nullable=False,
+    )
+    user_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"))
     user_agent = db.Column(db.String(255), nullable=False)
-    auth_date = db.Column(db.DateTime, default=datetime.datetime.now())
-
-    @property
-    def formatted_auth_date(self):
-        return self.auth_date.strftime("%d.%m.%Y")
+    auth_date = db.Column(db.Date, default=datetime.datetime.today())

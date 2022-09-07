@@ -11,4 +11,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY ./flask_app .
 
-ENTRYPOINT ["bash", "docker_entrypoint.sh"]
+RUN ["chmod", "+x", "./docker_entrypoint.sh"]
+ENTRYPOINT ["./docker_entrypoint.sh"]
