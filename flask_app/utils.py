@@ -2,10 +2,13 @@ import hashlib
 import os
 from functools import wraps
 
-from config import AppConfig
-from db_models import Role
 from flask import abort
 from flask_jwt_extended import current_user, jwt_required
+
+from config import get_config
+from db_models import Role
+
+AppConfig = get_config()
 
 
 def hash_password(password):

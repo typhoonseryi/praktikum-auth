@@ -1,10 +1,13 @@
 import redis
-from config import AppConfig
 from flasgger import Swagger
 from flask_jwt_extended import JWTManager
 from flask_marshmallow import Marshmallow
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
+
+from config import get_config
+
+AppConfig = get_config()
 
 db = SQLAlchemy()
 migrate = Migrate()

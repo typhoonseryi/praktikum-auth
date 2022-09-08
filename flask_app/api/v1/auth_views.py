@@ -1,22 +1,26 @@
 import datetime
 import hashlib
 import os
+from typing import Optional
 
 import validators
-from config import AppConfig
-from db_models import History, Role, User
-from extensions import db, jwt, jwt_redis_blocklist
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import (create_access_token, create_refresh_token,
                                 current_user, get_jwt, jwt_required,
                                 set_access_cookies, set_refresh_cookies,
                                 verify_jwt_in_request)
 from marshmallow import ValidationError
+
+from config import get_config
+from db_models import History, Role, User
+from extensions import db, jwt, jwt_redis_blocklist
 from schemas import (GetRolesSchema, HistorySchema, PostRoleSchema,
                      PostUserSchema, PutRoleSchema)
 from utils import has_admin_role, hash_password
 
 auth_blueprint = Blueprint("auth", __name__)
+
+AppConfig = get_config()
 
 
 @jwt.token_in_blocklist_loader
@@ -139,8 +143,7 @@ def login():
         db.session.add(record)
         db.session.commit()
         return response, 201
-    else:
-        return jsonify({"msg": "Incorrect credentials"}), 401
+    return jsonify({"msg": "Incorrect credentials"}), 401
 
 
 @auth_blueprint.post("/login/change")
@@ -221,13 +224,32 @@ def reset():
 def history():
     """История входов в учетную запись (для авторизованного пользователя)
     ---
+    parameters:
+      - in: query
+        name: page
+        schema:
+          type: integer
+          minimum: 1
+        description: page number
+      - in: query
+        name: per_page
+        schema:
+          type: integer
+          minimum: 1
+        description: number of items per page
     responses:
       '200':
         description: List of login data
       '401':
         description: Token has been revoked
     """
-    records = History.query.filter_by(user=current_user)
+    try:
+        page = int(request.args.get('page', 1))
+        per_page = int(request.args.get('per_page', 10))
+    except ValueError:
+        return jsonify({'error': 'Page and per_page params should be integers'}), 400
+
+    records = History.query.filter_by(user=current_user).paginate(page, per_page).items
     result = HistorySchema(many=True).dump(records)
     return jsonify(result), 200
 
@@ -379,12 +401,12 @@ def update_role(role_id):
         return jsonify({"error": "Role name is taken"}), 409
 
     role = Role.query.filter_by(id=role_id).one_or_none()
-    if role:
-        for (key, value) in request_data.items():
-            setattr(role, key, value)
-        db.session.commit()
-    else:
+    if not role:
         return {"error": "Role has not been created yet"}, 409
+
+    for (key, value) in request_data.items():
+        setattr(role, key, value)
+    db.session.commit()
     return jsonify({"msg": "Role updated"}), 201
 
 
@@ -404,11 +426,11 @@ def delete_role(role_id):
         description: Role has not been created yet
     """
     role = Role.query.filter_by(id=role_id)
-    if role:
-        role.delete()
-        db.session.commit()
-    else:
+    if not role:
         return {"error": "Role has not been created yet"}, 409
+
+    role.delete()
+    db.session.commit()
     return jsonify({"msg": "Role deleted"}), 201
 
 
